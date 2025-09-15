@@ -27,7 +27,8 @@ app.use('/submit-order', apiLimiter);
 
 // --- Nodemailer Configuration ---
 const transporter = nodemailer.createTransport({
-    service: 'gmail', auth: { user: process.env.EMAIL_USER, pass: process.env.EMAIL_PASS }
+    service: 'gmail', auth: { user: process.env.EMAIL_USER, pass: process.env.EMAIL_PASS },
+    name: 'lamasat.com'
 });
 const SITE_EMAIL = process.env.SITE_EMAIL;
 

@@ -1,4 +1,4 @@
-require('dotenv').config({ path: require('path').resolve(__dirname, '.env') });
+require('dotenv').config();
 const express = require('express');
 const multer = require('multer');
 const path = require('path');
@@ -9,7 +9,6 @@ const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
 
 const app = express();
-const port = process.env.PORT || 3000;
 
 // --- Security Middleware ---
 app.use(helmet());
@@ -33,26 +32,26 @@ const transporter = nodemailer.createTransport({
 const SITE_EMAIL = process.env.SITE_EMAIL;
 
 // --- Multer Configuration ---
-// For analysis, we only need the file in memory
-const analysisStorage = multer.memoryStorage();
-const uploadAnalysis = multer({ storage: analysisStorage }).single('document');
-
-// For final submission, we save the file to disk
-const finalStorage = multer.diskStorage({ destination: './uploads/', filename: (req, file, cb) => { cb(null, 'order-' + Date.now() + path.extname(file.originalname)); } });
-const uploadFinal = multer({ storage: finalStorage }).single('document');
+// Vercel is stateless, so we must process files in memory
+const memoryStorage = multer.memoryStorage();
+const upload = multer({ storage: memoryStorage }).single('document');
 
 // --- Middleware ---
 app.use(cors({ origin: '*' }));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
-app.use(express.static(path.join(__dirname, '../')));
+
+// Serve static files from the root directory
+const staticPath = path.join(__dirname, '../');
+app.use(express.static(staticPath));
 
 app.get('/', (req, res) => {
-    res.sendFile(path.join(__dirname, '../index.html'));
+    res.sendFile(path.join(staticPath, 'index.html'));
 });
 
+
 // --- Document Analysis Route ---
-app.post('/analyze-document', uploadAnalysis, async (req, res) => {
+app.post('/analyze-document', upload, async (req, res) => {
     if (!req.file) {
         return res.status(400).json({ message: 'Error: No File Selected!' });
     }
@@ -61,10 +60,9 @@ app.post('/analyze-document', uploadAnalysis, async (req, res) => {
         const result = await mammoth.extractRawText({ buffer: req.file.buffer });
         const text = result.value;
         
-        // More accurate word count logic
         const cleanedText = text
-            .replace(/[\u2010-\u2015]/g, ' ') // Replace various hyphen types with spaces
-            .replace(/[^\p{L}\p{N}\s]/gu, ''); // Remove punctuation, keeping Unicode letters and numbers
+            .replace(/[\u2010-\u2015]/g, ' ')
+            .replace(/[^\p{L}\p{N}\s]/gu, '');
     
         const words = cleanedText.trim().split(/\s+/).filter(word => word.length > 0);
         const wordCount = words.length;
@@ -78,8 +76,8 @@ app.post('/analyze-document', uploadAnalysis, async (req, res) => {
     }
 });
 
-// --- New Order Submission Route ---
-app.post('/submit-order', uploadFinal, async (req, res) => {
+// --- New Order Submission Route (Refactored for Vercel) ---
+app.post('/submit-order', upload, async (req, res) => {
     if (!req.file) {
         return res.status(400).json({ success: false, message: 'Error: No File Selected!' });
     }
@@ -93,9 +91,10 @@ app.post('/submit-order', uploadFinal, async (req, res) => {
     try {
         const servicesList = JSON.parse(services);
 
+        // Send file buffer instead of file path
         sendEmailWithAttachment(
             userEmail,
-            req.file.path,
+            req.file.buffer, // Pass the buffer
             req.file.originalname,
             servicesList,
             deliveryTime,
@@ -111,8 +110,8 @@ app.post('/submit-order', uploadFinal, async (req, res) => {
 });
 
 
-// --- Email Sending Function ---
-function sendEmailWithAttachment(userEmail, filePath, fileName, services, deliveryTime, totalPrice) {
+// --- Email Sending Function (Refactored for Vercel) ---
+function sendEmailWithAttachment(userEmail, fileBuffer, fileName, services, deliveryTime, totalPrice) {
     console.log(`Attempting to send email for: ${fileName} from ${userEmail}`);
 
     const servicesHtml = '<ul>' + services.map(s => `<li>${s}</li>`).join('') + '</ul>';
@@ -133,7 +132,7 @@ function sendEmailWithAttachment(userEmail, filePath, fileName, services, delive
         `,
         attachments: [{
             filename: fileName,
-            path: filePath
+            content: fileBuffer // Use content (buffer) instead of path
         }]
     };
 
@@ -145,4 +144,5 @@ function sendEmailWithAttachment(userEmail, filePath, fileName, services, delive
     });
 }
 
-app.listen(port, () => console.log(`Server started on port ${port}`));
+// Export the app for Vercel to use
+module.exports = app;

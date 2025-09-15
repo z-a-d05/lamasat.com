@@ -1,4 +1,3 @@
-
 const express = require('express');
 const multer = require('multer');
 const path = require('path');
@@ -10,6 +9,13 @@ const rateLimit = require('express-rate-limit');
 
 const app = express();
 app.set('trust proxy', 1);
+
+// --- Sanity check for Environment Variables ---
+console.log("--- Environment Variable Check ---");
+console.log("EMAIL_USER loaded:", !!process.env.EMAIL_USER);
+console.log("EMAIL_PASS loaded:", !!process.env.EMAIL_PASS);
+console.log("SITE_EMAIL loaded:", !!process.env.SITE_EMAIL);
+console.log("---------------------------------");
 
 // --- Security Middleware ---
 app.use(helmet());
@@ -126,12 +132,14 @@ function sendEmailWithAttachment(userEmail, fileBuffer, fileName, services, deli
             content: fileBuffer
         }]
     };
-
+    
+    console.log('Sending email with Nodemailer...');
     transporter.sendMail(mailOptions, (error, info) => {
         if (error) {
-            return console.error('Nodemailer Error:', error);
+            console.error('NODEMAILER_ERROR:', JSON.stringify(error, null, 2));
+            return;
         }
-        console.log('Email sent successfully: ' + info.response);
+        console.log('Nodemailer success! Info:', JSON.stringify(info, null, 2));
     });
 }
 

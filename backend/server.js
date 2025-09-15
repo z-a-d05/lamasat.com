@@ -36,19 +36,10 @@ const SITE_EMAIL = process.env.SITE_EMAIL;
 const memoryStorage = multer.memoryStorage();
 const upload = multer({ storage: memoryStorage }).single('document');
 
-// --- Middleware ---
+// --- API Middleware ---
 app.use(cors({ origin: '*' }));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
-
-// Serve static files from the root directory
-const staticPath = path.join(__dirname, '../');
-app.use(express.static(staticPath));
-
-app.get('/', (req, res) => {
-    res.sendFile(path.join(staticPath, 'index.html'));
-});
-
 
 // --- Document Analysis Route ---
 app.post('/analyze-document', upload, async (req, res) => {

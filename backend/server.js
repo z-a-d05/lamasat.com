@@ -32,14 +32,24 @@ const transporter = nodemailer.createTransport({
 const SITE_EMAIL = process.env.SITE_EMAIL;
 
 // --- Multer Configuration ---
-// Vercel is stateless, so we must process files in memory
 const memoryStorage = multer.memoryStorage();
 const upload = multer({ storage: memoryStorage }).single('document');
 
-// --- API Middleware ---
+// --- Middleware ---
 app.use(cors({ origin: '*' }));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+
+// --- Static Files Serving ---
+// Serve files from the root directory, which is one level up from /backend
+const staticPath = path.resolve(__dirname, '../');
+app.use(express.static(staticPath));
+
+// --- Routes ---
+// Make sure the root path serves the index.html file
+app.get('/', (req, res) => {
+    res.sendFile(path.join(staticPath, 'index.html'));
+});
 
 // --- Document Analysis Route ---
 app.post('/analyze-document', upload, async (req, res) => {
@@ -67,7 +77,7 @@ app.post('/analyze-document', upload, async (req, res) => {
     }
 });
 
-// --- New Order Submission Route (Refactored for Vercel) ---
+// --- New Order Submission Route ---
 app.post('/submit-order', upload, async (req, res) => {
     if (!req.file) {
         return res.status(400).json({ success: false, message: 'Error: No File Selected!' });
@@ -82,10 +92,9 @@ app.post('/submit-order', upload, async (req, res) => {
     try {
         const servicesList = JSON.parse(services);
 
-        // Send file buffer instead of file path
         sendEmailWithAttachment(
             userEmail,
-            req.file.buffer, // Pass the buffer
+            req.file.buffer,
             req.file.originalname,
             servicesList,
             deliveryTime,
@@ -101,7 +110,7 @@ app.post('/submit-order', upload, async (req, res) => {
 });
 
 
-// --- Email Sending Function (Refactored for Vercel) ---
+// --- Email Sending Function ---
 function sendEmailWithAttachment(userEmail, fileBuffer, fileName, services, deliveryTime, totalPrice) {
     console.log(`Attempting to send email for: ${fileName} from ${userEmail}`);
 
@@ -123,7 +132,7 @@ function sendEmailWithAttachment(userEmail, fileBuffer, fileName, services, deli
         `,
         attachments: [{
             filename: fileName,
-            content: fileBuffer // Use content (buffer) instead of path
+            content: fileBuffer
         }]
     };
 

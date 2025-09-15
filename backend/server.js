@@ -35,21 +35,10 @@ const SITE_EMAIL = process.env.SITE_EMAIL;
 const memoryStorage = multer.memoryStorage();
 const upload = multer({ storage: memoryStorage }).single('document');
 
-// --- Middleware ---
+// --- API Middleware ---
 app.use(cors({ origin: '*' }));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
-
-// --- Static Files Serving ---
-// Serve files from the root directory, which is one level up from /backend
-const staticPath = path.resolve(__dirname, '../');
-app.use(express.static(staticPath));
-
-// --- Routes ---
-// Make sure the root path serves the index.html file
-app.get('/', (req, res) => {
-    res.sendFile(path.join(staticPath, 'index.html'));
-});
 
 // --- Document Analysis Route ---
 app.post('/analyze-document', upload, async (req, res) => {

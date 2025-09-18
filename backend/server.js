@@ -1,7 +1,7 @@
 const express = require('express');
 const multer = require('multer');
 const path = require('path');
-const nodemailer = require('nodemailer');
+const { Resend } = require('resend');
 const cors = require('cors');
 const mammoth = require('mammoth');
 const helmet = require('helmet');
@@ -12,9 +12,9 @@ app.set('trust proxy', 1);
 
 // --- Sanity check for Environment Variables ---
 console.log("--- Environment Variable Check ---");
-console.log("EMAIL_USER loaded:", !!process.env.EMAIL_USER);
-console.log("EMAIL_PASS loaded:", !!process.env.EMAIL_PASS);
 console.log("SITE_EMAIL loaded:", !!process.env.SITE_EMAIL);
+console.log("RESEND_API_KEY loaded:", !!process.env.RESEND_API_KEY);
+console.log("FROM_EMAIL loaded:", !!process.env.FROM_EMAIL);
 console.log("---------------------------------");
 
 // --- Security Middleware ---
@@ -32,11 +32,8 @@ app.use('/analyze-document', apiLimiter);
 app.use('/submit-order', apiLimiter);
 
 
-// --- Nodemailer Configuration ---
-const transporter = nodemailer.createTransport({
-    service: 'gmail', auth: { user: process.env.EMAIL_USER, pass: process.env.EMAIL_PASS },
-    name: 'lamasat.com'
-});
+// --- Resend Configuration ---
+const resend = new Resend(process.env.RESEND_API_KEY);
 const SITE_EMAIL = process.env.SITE_EMAIL;
 
 // --- Multer Configuration ---
@@ -89,7 +86,7 @@ app.post('/submit-order', upload, async (req, res) => {
     try {
         const servicesList = JSON.parse(services);
 
-        sendEmailWithAttachment(
+        await sendEmailWithAttachment(
             userEmail,
             req.file.buffer,
             req.file.originalname,
@@ -102,45 +99,53 @@ app.post('/submit-order', upload, async (req, res) => {
 
     } catch (error) {
         console.error('Order Submission Error:', error);
-        res.status(500).json({ success: false, message: 'Failed to submit order.' });
+        res.status(500).json({ success: false, message: 'Failed to send email. Please try again later.' });
     }
 });
 
 
-// --- Email Sending Function ---
-function sendEmailWithAttachment(userEmail, fileBuffer, fileName, services, deliveryTime, totalPrice) {
-    console.log(`Attempting to send email for: ${fileName} from ${userEmail}`);
+// --- Email Sending Function (Now using Resend) ---
+async function sendEmailWithAttachment(userEmail, fileBuffer, fileName, services, deliveryTime, totalPrice) {
+    console.log(`Attempting to send email for: ${fileName} from ${userEmail} using Resend.`);
 
     const servicesHtml = '<ul>' + services.map(s => `<li>${s}</li>`).join('') + '</ul>';
 
-    const mailOptions = {
-        from: process.env.EMAIL_USER,
-        to: SITE_EMAIL,
-        subject: `طلب جديد: ${fileName}`,
-        html: `
-            <h3>طلب جديد</h3>
-            <p><strong>البريد الإلكتروني للعميل:</strong> ${userEmail}</p>
-            <h4>الخدمات المطلوبة:</h4>
-            ${servicesHtml}
-            <p><strong>مدة التسليم المختارة:</strong> ${deliveryTime}</p>
-            <hr>
-            <p><strong>التكلفة الإجمالية:</strong> ${totalPrice}</p>
-            <p>الملف المرفوع موجود في المرفقات.</p>
-        `,
-        attachments: [{
-            filename: fileName,
-            content: fileBuffer
-        }]
-    };
-    
-    console.log('Sending email with Nodemailer...');
-    transporter.sendMail(mailOptions, (error, info) => {
+    const fromEmail = process.env.FROM_EMAIL || 'onboarding@resend.dev';
+    console.log(`Sending from email: ${fromEmail}`);
+
+
+    try {
+        const { data, error } = await resend.emails.send({
+            from: fromEmail,
+            to: SITE_EMAIL,
+            subject: `طلب جديد: ${fileName}`,
+            html: `
+                <h3>طلب جديد</h3>
+                <p><strong>البريد الإلكتروني للعميل:</strong> ${userEmail}</p>
+                <h4>الخدمات المطلوبة:</h4>
+                ${servicesHtml}
+                <p><strong>مدة التسليم المختارة:</strong> ${deliveryTime}</p>
+                <hr>
+                <p><strong>التكلفة الإجمالية:</strong> ${totalPrice}</p>
+                <p>الملف المرفوع موجود في المرفقات.</p>
+            `,
+            attachments: [{
+                filename: fileName,
+                content: fileBuffer
+            }]
+        });
+
         if (error) {
-            console.error('NODEMAILER_ERROR:', JSON.stringify(error, null, 2));
-            return;
+            console.error('RESEND_ERROR:', JSON.stringify(error, null, 2));
+            throw new Error(error);
         }
-        console.log('Nodemailer success! Info:', JSON.stringify(info, null, 2));
-    });
+
+        console.log('Resend success! Email ID:', JSON.stringify(data, null, 2));
+
+    } catch (error) {
+        console.error('Failed to send email via Resend:', error);
+        throw error;
+    }
 }
 
 // Export the app for Vercel to use

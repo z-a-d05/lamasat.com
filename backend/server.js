@@ -15,6 +15,7 @@ console.log("--- Environment Variable Check ---");
 console.log("SITE_EMAIL loaded:", !!process.env.SITE_EMAIL);
 console.log("RESEND_API_KEY loaded:", !!process.env.RESEND_API_KEY);
 console.log("FROM_EMAIL loaded:", !!process.env.FROM_EMAIL);
+console.log("SECOND_RECIPIENT_EMAIL loaded:", !!process.env.SECOND_RECIPIENT_EMAIL);
 console.log("---------------------------------");
 
 // --- Security Middleware ---
@@ -145,6 +146,11 @@ async function sendEmailWithAttachment(userEmail, fileBuffer, fileName, services
     } catch (error) {
         console.error('Failed to send email via Resend:', error);
         throw error;
+    }
+}
+
+// Export the app for Vercel to use
+module.exports = app;   throw error;
     }
 }
 

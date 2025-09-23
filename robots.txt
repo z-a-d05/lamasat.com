@@ -1,0 +1,3 @@
+User-agent: *
+Allow: /
+Sitemap: https://lamasat.vercel.app/sitemap.xml

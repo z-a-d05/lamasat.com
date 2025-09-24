@@ -6,6 +6,7 @@
   ],
   "routes": [
     { "src": "/analyze-document", "dest": "/backend/server.js" },
-    { "src": "/submit-order", "dest": "/backend/server.js" }
+    { "src": "/submit-order", "dest": "/backend/server.js" },
+    { "src": "/(.*)", "dest": "/public/$1" }
   ]
 }

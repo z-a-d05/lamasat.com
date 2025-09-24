@@ -150,9 +150,4 @@ async function sendEmailWithAttachment(userEmail, fileBuffer, fileName, services
 }
 
 // Export the app for Vercel to use
-module.exports = app;   throw error;
-    }
-}
-
-// Export the app for Vercel to use
 module.exports = app;

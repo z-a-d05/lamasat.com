@@ -6,7 +6,8 @@
     { "src": "*.css", "use": "@vercel/static" },
     { "src": "*.js", "use": "@vercel/static" },
     { "src": "*.webp", "use": "@vercel/static" },
-    { "src": "*.xml", "use": "@vercel/static" }
+    { "src": "*.xml", "use": "@vercel/static" },
+    { "src": "*.txt", "use": "@vercel/static" }
   ],
   "routes": [
     { "src": "/analyze-document", "dest": "/backend/server.js" },

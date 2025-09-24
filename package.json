@@ -5,6 +5,7 @@
   "main": "app.js",
   "scripts": {
     "start": "node backend/server.js",
+    "start:local": "node local-server.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [],

@@ -46,9 +46,6 @@ app.use(cors({ origin: '*' }));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// Serve static files from the 'public' directory
-app.use(express.static('public'));
-
 // --- Document Analysis Route ---
 app.post('/analyze-document', upload, async (req, res) => {
     if (!req.file) {
